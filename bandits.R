@@ -7,6 +7,10 @@
 
 library(ggplot2)
 
+################################################################################
+# BANDIT PROBLEMS                                                              #
+################################################################################
+
 # Constructor for multi-armed bandit problems, with a customizable number of
 # arms, normal distribution for sampling the means (e.g. initial true q-values,
 # q*(a)) of the arm reward distributions (once the mean for each arm is
@@ -84,4 +88,51 @@ plot.bandit <- function(mab) {
          y="Reward distribution") +
     geom_hline(aes(yintercept=mab$initmean), linetype="dashed")
 }
+
+################################################################################
+# BANDIT ALGORITHMS                                                            #
+################################################################################
+
+simple_bandit_algorithm <- function(mab, weight_func, steps, exp_param) {
+  q_value_estimates <- rep(0L, mab$arms)
+  action_counters <- rep(0L, mab$arms)
+  rewards <- rep(0, steps)
+  optimal_avg_rewards <- rep(0,steps)
+
+  for(step in 1:steps) {
+    if(runif(1) < exp_param) { # Explore
+      action <- sample(mab$arms,1)
+    } else { # Exploit
+      action <- which.max(q_value_estimates)
+    }
+
+    optimal_avg_rewards[step] <- max(mab$qvals)
+    res <- pull_arm(mab, action)
+    mab <- res$bandit
+    rewards[step] <- res$reward
+
+    action_counters[action] <- action_counters[action] + 1
+    q_value_estimates[action] <- q_value_estimates[action] +
+      (weight_func(action_counters, action) *
+         (res$reward - q_value_estimates[action]))
+  }
+
+  list(rewards=rewards, optimal_avg_rewards=optimal_avg_rewards,
+       q_value_estimates=q_value_estimates)
+}
+
+get_constant_weight_func <- function(weight) {
+  function(...) {
+    weight
+  }
+}
+
+sample_average_weight_func <- function(action_counters, action) {
+  (1 / action_counters[action])
+}
+
+
+
+
+
 
