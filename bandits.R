@@ -97,19 +97,23 @@ plot.bandit <- function(mab) {
 # "Reinforcement Learning". This version takes a weight function, which may
 # make use of the action counters, for using the sample average approach, or
 # which can simply return a constant step value for contending with
-# non-stationary problems, and by default allows for the e-greedy approach.
+# non-stationary problems, and allows for the e-greedy and optimistic initial
+# values approaches.
 # @param mab            A multi-armed bandit problem instance
 # @param weight_func    A weight function which may make use of action counters
 #                       to return a step value for action value updates.
 # @param steps          The number of steps for which to run the algorithm on
 #                       the problem instance.
 # @param exp_param      The e parameter for e-greedy action selection.
+# @param init_value     An initial value for the q-value estimates (can be used
+#                       for "optimistic initial values").
 # @return               A list containing vectors of size step giving the
 #                       reward received and what the optimal average reward is
 #                       (this varies over time for non-stationary problems) at
 #                       each step, as well as the final q-value estimates.
-simple_bandit_algorithm <- function(mab, steps, weight_func, exp_param) {
-  q_value_estimates <- rep(0L, mab$arms)
+simple_bandit_algorithm <- function(mab, steps, weight_func, exp_param,
+                                    init_value=0) {
+  q_value_estimates <- rep(init_value, mab$arms)
   action_counters <- rep(0L, mab$arms)
   rewards <- rep(0, steps)
   optimal_avg_rewards <- rep(0,steps)
