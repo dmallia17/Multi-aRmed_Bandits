@@ -97,35 +97,43 @@ plot.bandit <- function(mab) {
 # "Reinforcement Learning". This version takes a weight function, which may
 # make use of the action counters, for using the sample average approach, or
 # which can simply return a constant step value for contending with
-# non-stationary problems, and allows for the e-greedy and optimistic initial
-# values approaches.
+# non-stationary problems, and allows for e-greedy or upper confidence bound
+# action selection, which can be paired with optimistic initial values.
 # @param mab            A multi-armed bandit problem instance
 # @param weight_func    A weight function which may make use of action counters
 #                       to return a step value for action value updates.
 # @param steps          The number of steps for which to run the algorithm on
 #                       the problem instance.
-# @param exp_param      The e parameter for e-greedy action selection.
+# @param exp_param      The e parameter for e-greedy action selection or the c
+#                       parameter for upper confidence bound action selection.
 # @param init_value     An initial value for the q-value estimates (can be used
 #                       for "optimistic initial values").
 # @return               A list containing vectors of size step giving the
 #                       reward received and what the optimal average reward is
 #                       (this varies over time for non-stationary problems) at
 #                       each step, as well as the final q-value estimates.
-simple_bandit_algorithm <- function(mab, steps, weight_func, exp_param,
-                                    init_value=0) {
+simple_bandit_algorithm <- function(mab, steps, weight_func, action_func,
+                                    exp_param, init_value=0) {
   q_value_estimates <- rep(init_value, mab$arms)
-  action_counters <- rep(0L, mab$arms)
+
+  # Initialize so as not to divide by initially zero action counts
+  if(identical(action_func, ucb_action_func)) {
+    action_counters <- rep(1L, mab$arms)
+  } else{
+    action_counters <- rep(0L, mab$arms)
+  }
+
   rewards <- rep(0, steps)
   optimal_avg_rewards <- rep(0,steps)
 
   for(step in 1:steps) {
-    if(runif(1) < exp_param) { # Explore
-      action <- sample(mab$arms,1)
-    } else { # Exploit
-      action <- which.max(q_value_estimates)
-    }
+    action <- action_func(mab, q_value_estimates, exp_param, step,
+                          action_counters)
 
+    # Track optimal rewards
     optimal_avg_rewards[step] <- max(mab$qvals)
+
+    # Take action
     res <- pull_arm(mab, action)
     # Get bandit problem (may be a modified problem if non-stationary)
     mab <- res$bandit
@@ -162,8 +170,20 @@ sample_average_weight_func <- function(action_counters, action) {
   (1 / action_counters[action])
 }
 
+# Function for implementing e-greedy behavior
+e_greedy_action_func <- function(mab, q_value_estimates, exp_param, ...) {
+  if(runif(1) < exp_param) { # Explore
+    sample(mab$arms,1)
+  } else { # Exploit
+    which.max(q_value_estimates)
+  }
+}
 
-
-
+# Function for implementing "Upper-Confidence-Bound Action Selection" (see pg.
+# 35 in "Reinforcement Learning")
+ucb_action_func <- function(mab, q_value_estimates, exp_param, step,
+                            action_counters) {
+  which.max(q_value_estimates + exp_param * sqrt(log(step) / action_counters))
+}
 
 
