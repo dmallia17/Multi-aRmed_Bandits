@@ -93,7 +93,22 @@ plot.bandit <- function(mab) {
 # BANDIT ALGORITHMS                                                            #
 ################################################################################
 
-simple_bandit_algorithm <- function(mab, weight_func, steps, exp_param) {
+# An implementation of the "simple bandit algorithm" from page 32 in
+# "Reinforcement Learning". This version takes a weight function, which may
+# make use of the action counters, for using the sample average approach, or
+# which can simply return a constant step value for contending with
+# non-stationary problems, and by default allows for the e-greedy approach.
+# @param mab            A multi-armed bandit problem instance
+# @param weight_func    A weight function which may make use of action counters
+#                       to return a step value for action value updates.
+# @param steps          The number of steps for which to run the algorithm on
+#                       the problem instance.
+# @param exp_param      The e parameter for e-greedy action selection.
+# @return               A list containing vectors of size step giving the
+#                       reward received and what the optimal average reward is
+#                       (this varies over time for non-stationary problems) at
+#                       each step, as well as the final q-value estimates.
+simple_bandit_algorithm <- function(mab, steps, weight_func, exp_param) {
   q_value_estimates <- rep(0L, mab$arms)
   action_counters <- rep(0L, mab$arms)
   rewards <- rep(0, steps)
@@ -108,10 +123,12 @@ simple_bandit_algorithm <- function(mab, weight_func, steps, exp_param) {
 
     optimal_avg_rewards[step] <- max(mab$qvals)
     res <- pull_arm(mab, action)
+    # Get bandit problem (may be a modified problem if non-stationary)
     mab <- res$bandit
     rewards[step] <- res$reward
 
     action_counters[action] <- action_counters[action] + 1
+    # Incremental updating
     q_value_estimates[action] <- q_value_estimates[action] +
       (weight_func(action_counters, action) *
          (res$reward - q_value_estimates[action]))
@@ -121,12 +138,22 @@ simple_bandit_algorithm <- function(mab, weight_func, steps, exp_param) {
        q_value_estimates=q_value_estimates)
 }
 
+# Function for creating a constant weight (step) function for action value
+# updates
+# @param weight   A double in (0,1)
+# @return         A function that only returns weight
 get_constant_weight_func <- function(weight) {
   function(...) {
     weight
   }
 }
 
+# Function for implementing sample averaging, via returning 1 / the number of
+# times the current action has been undertaken
+# @param action_counters    The counts of the number of times each action has
+#                           been tried
+# @param action             The current action selection
+# @return                   1 / the number of times the action has been tried
 sample_average_weight_func <- function(action_counters, action) {
   (1 / action_counters[action])
 }
