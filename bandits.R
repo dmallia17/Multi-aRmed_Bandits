@@ -87,8 +87,8 @@ plot.bandit <- function(mab) {
     labs(title=paste0(mab$arms,"-armed bandit configuration"), x="Action",
          y="Reward distribution") +
     geom_hline(aes(yintercept=mab$initmean), linetype="dashed", color="red") +
-    annotate("text", x=1, y=mab$initmean + 0.25, label="Reward mean",
-             color="red")
+    annotate("text", x=floor(mab$arms/2), y=mab$initmean + 0.25,
+             label="Reward mean", color="red")
 }
 
 ################################################################################
