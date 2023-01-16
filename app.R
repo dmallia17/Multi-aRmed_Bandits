@@ -7,6 +7,7 @@ ui <- navbarPage("Multi-aRmed Bandits",
     sidebarLayout(
       sidebarPanel(
         # PROBLEM CONTROLS
+        h1("Problem Controls:"),
         sliderInput("arms", "Number of arms", 1, 50, 10, step=1),
         numericInput("initmean", "Initial reward distribution mean", 0),
         numericInput("initsd", "Initial reward distribution standard dev.", 1),
@@ -15,7 +16,19 @@ ui <- navbarPage("Multi-aRmed Bandits",
                      choices=c("stationary", "nonstationary")),
         # Additional controls if non-stationary
         uiOutput("nonstationary_options"),
-        actionButton("new_problem", "New Problem")
+        actionButton("new_problem", "New Problem"),
+
+        # ALGORITHM CONTROLS
+        h1("Algorithm Controls:"),
+        numericInput("steps", "Number of steps to run", 1000),
+        radioButtons("update_weight", "Update weighting",
+                     choices=c("Sample Average", "Constant")),
+        uiOutput("update_options"),
+        radioButtons("action_method", "Action selection",
+                     choices=c("e-greedy", "Upper-Confidence-Bound")),
+        uiOutput("explore_choice"),
+        numericInput("init_q_vals", "Initial q-values", 0),
+        actionButton("run", "Run")
       ),
       mainPanel(
         plotOutput("mab_plot")
@@ -45,6 +58,20 @@ server <- function(input, output) {
                  0.01)
     )
   })
+
+  output$update_options <- renderUI({
+    req(input$update_weight == "Constant")
+    numericInput("weight", "Update weight", 0.5)
+  })
+
+  output$explore_choice <- renderUI({
+    if(input$action_method == "e-greedy") {
+      numericInput("exp_param", "Epsilon", 0.05)
+    } else {
+      numericInput("exp_param", "C", 2)
+    }
+  })
+
 }
 
 shinyApp(ui=ui,server=server)
