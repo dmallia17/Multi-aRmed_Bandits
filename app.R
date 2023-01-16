@@ -1,9 +1,33 @@
+# Author:       Daniel Mallia
+# Date Begun:   Jan 15, 2023
+# Purpose:      Offers an interface for running a customizable algorithm on
+#               different bandit problem configurations, either just a single
+#               problem, or over many problems, for more robust performance
+#               estimates.
+
 source("bandits.R")
 library(shiny)
 library(ggplot2)
 
 ui <- navbarPage("Multi-aRmed Bandits", 
-  tabPanel("Welcome"),
+  tabPanel("Welcome",
+    h4("Welcome to the Multi-aRmed Bandits testing interface!"),
+    HTML(paste0(
+      "This platform allows you to experiment with the following aspects:<br>",
+      "- Stationary and non-stationary bandit problems with accompanying ",
+        "visualizations<br>",
+      "- The 'simple bandit algorithm' with the ability to use different:<br>",
+      "<ul>estimate update weights</ul>",
+      "<ul>action selection methods</ul>",
+      "<ul>optimistic initial values</ul>",
+      "- Plotting of bandit algorithm performance<br><br>",
+      "There are two different modes/tabs, one for running on a single bandit ",
+      "problem, and another for running over many bandit problems for robust ",
+      "performance estimates.<br>",
+      "<strong>Please be aware that running in batch mode may take several ",
+      "seconds or even a couple of minutes depending on the chosen settings ",
+      "and the available hardware.</strong>"))
+  ),
   tabPanel("Single Run",
     sidebarLayout(
       sidebarPanel(

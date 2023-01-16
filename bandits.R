@@ -4,6 +4,9 @@
 #               "Reinforcement Learning" (2nd ed.), this file contains
 #               implementations of:
 #                 - Stationary and non-stationary bandit problems
+#                 - The "simple bandit algorithm" with the ability to use
+#                   different estimate update weights and action selection
+#                   methods, as well as optimistic initial values.
 
 library(ggplot2)
 
