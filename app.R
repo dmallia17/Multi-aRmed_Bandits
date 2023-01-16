@@ -1,5 +1,6 @@
 source("bandits.R")
 library(shiny)
+library(ggplot2)
 
 ui <- navbarPage("Multi-aRmed Bandits", 
   tabPanel("Welcome"),
@@ -27,27 +28,28 @@ ui <- navbarPage("Multi-aRmed Bandits",
         radioButtons("action_method", "Action selection",
                      choices=c("e-greedy", "Upper-Confidence-Bound")),
         uiOutput("explore_choice"),
-        numericInput("init_q_vals", "Initial q-values", 0),
+        numericInput("init_q_val", "Initial q-value", 0),
         actionButton("run", "Run")
       ),
       mainPanel(
-        plotOutput("mab_plot")
+        plotOutput("mab_plot"),
+        plotOutput("single_res_plot")
       )
     )),
   tabPanel("Batch Run")
 )
 
 server <- function(input, output) {
-  mab <- reactiveValues(mab = new_multi_armed_bandit())
+  vals <- reactiveValues(mab = new_multi_armed_bandit(), singleres=NULL)
   
   # A new bandit problem should only be created upon button press
   observeEvent(input$new_problem,
-    mab$mab <- new_multi_armed_bandit(arms=input$arms, initmean=input$initmean,
+    vals$mab <- new_multi_armed_bandit(arms=input$arms, initmean=input$initmean,
       initsd=input$initsd, nsmean=input$nsmean, nssd=input$nssd,
       class=input$class))
   
   # Display violin plot of the current problem
-  output$mab_plot <- renderPlot({plot(mab$mab)})
+  output$mab_plot <- renderPlot({plot(vals$mab)})
   
   # Add additional controls if the selected problem type is non-stationary
   output$nonstationary_options <- renderUI({
@@ -59,11 +61,14 @@ server <- function(input, output) {
     )
   })
 
+  # Add additional control if the update weight should be constant
   output$update_options <- renderUI({
     req(input$update_weight == "Constant")
     numericInput("weight", "Update weight", 0.5)
   })
 
+  # Present exploration parameter differently depending on action selection
+  # method
   output$explore_choice <- renderUI({
     if(input$action_method == "e-greedy") {
       numericInput("exp_param", "Epsilon", 0.05)
@@ -72,6 +77,37 @@ server <- function(input, output) {
     }
   })
 
+  # Only run upon click of the run button
+  observeEvent(input$run, {
+    # Fetch the appropriate functions
+    if (input$update_weight == "Sample Average") {
+      weight_func <- sample_average_weight_func
+    } else {
+      weight_func <- get_constant_weight_func(input$weight)
+    }
+
+    if (input$action_method == "e-greedy") {
+      action_func <- e_greedy_action_func
+    } else {
+      action_func <- ucb_action_func
+    }
+
+    # Run the bandit algorithm
+    vals$single_res <- simple_bandit_algorithm(vals$mab, input$steps,
+                  weight_func, action_func, input$exp_param,input$init_q_val)
+    }
+  )
+
+  output$single_res_plot <- renderPlot({
+    # Only plot once a result is available
+    req(vals$single_res)
+    ggplot(data.frame(steps=1:input$steps, rewards=vals$single_res$rewards,
+      optimal=vals$single_res$optimal_avg_rewards)) +
+      geom_line(aes(x=steps, y=rewards)) +
+      geom_line(aes(x=steps, y=optimal), color="red", linetype="dashed", size=2) +
+      labs(title="Run results",
+           subtitle="Dashed line indicates optimal average reward")
+  })
 }
 
 shinyApp(ui=ui,server=server)
